@@ -1,1 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Campus Pulse Dashboard</title>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0b1120;
+            color: white;
+        }
+
+        /* ================= HEADER ================= */
+        .dashboard-header {
+            background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .dashboard-header h1 i {
+            color: #facc15;
+            margin-right: 12px;
+        }
+
+        .dashboard-header p {
+            margin-top: 8px;
+            color: #dbeafe;
+        }
+
+        /* ================= FILTERS ================= */
+        .filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #111827;
+            border-bottom: 1px solid #334155;
+        }
+
+        .filter-box {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+        }
+
+        .filter-box label {
+            margin-bottom: 6px;
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: #1e293b;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* ================= KPI ================= */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 25px;
+        }
+
+        .kpi {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            transition: all 0.3s ease;
+        }
+
+        .kpi:hover {
+            transform: translateY(-6px);
+        }
+
+        .kpi-icon {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #c4b5fd;
+        }
+
+        .kpi p {
+            margin: 0;
+            color: #cbd5e1;
+        }
+
+        .kpi h2 {
+            margin-top: 10px;
+            font-size: 30px;
+        }
+
+        /* ================= GRID ================= */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            padding: 0 25px 25px;
+        }
+
+        .card {
+            background: #111827;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            border: 1px solid #1f2937;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #e2e8f0;
+        }
+
+        .large-card { grid-column: span 6; }
+        .medium-card { grid-column: span 4; }
+        .small-card { grid-column: span 3; }
+        .full-width { grid-column: span 12; }
+
+        canvas {
+            width: 100% !important;
+            height: 320px !important;
+        }
+
+        /* ================= HEATMAP ================= */
+        #heatmap-container {
+            overflow-x: auto;
+        }
+
+        .heat-header,
+        .heat-row {
+            display: flex;
+            width: max-content;
+        }
+
+        .heat-label,
+        .heat-cell {
+            min-width: 140px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #334155;
+            font-size: 12px;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .heat-label {
+            background: #312e81;
+            font-weight: bold;
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+
+        /* ================= RESPONSIVE ================= */
+        @media(max-width: 1200px) {
+            .large-card,
+            .medium-card,
+            .small-card {
+                grid-column: span 12;
+            }
+        }
+
+        @media(max-width: 900px) {
+            .kpi-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media(max-width: 600px) {
+            .kpi-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= HEADER ================= -->
+    <div class="dashboard-header">
+        <h1><i class="fa-solid fa-graduation-cap"></i>Student Campus Pulse Dashboard</h1>
+        <p>Interactive Student Satisfaction & Campus Analytics Dashboard</p>
+    </div>
+
+    <!-- ================= FILTERS ================= -->
+    <div class="filter-panel">
+        <div class="filter-box">
+            <label>Facility</label>
+            <select id="facilityFilter"><option value="">All Facilities</option></select>
+        </div>
+
+        <div class="filter-box">
+            <label>Gender</label>
+            <select id="genderFilter"><option value="">All Genders</option></select>
+        </div>
+
+        <div class="filter-box">
+            <label>Academic Year</label>
+            <select id="yearFilter"><option value="">All Years</option></select>
+        </div>
+
+        <div class="filter-box">
+            <label>Hostel Status</label>
+            <select id="hostelFilter"><option value="">All Hostel</option></select>
+        </div>
+    </div>
+
+    <!-- ================= KPI ================= -->
+    <div class="kpi-container">
+        <div class="kpi">
+            <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+            <p>Total Students</p>
+            <h2 id="students">0</h2>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-icon"><i class="fa-solid fa-face-smile"></i></div>
+            <p>Avg Satisfaction</p>
+            <h2 id="satisfaction">0</h2>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <p>Avg Attendance</p>
+            <h2 id="attendance">0</h2>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-icon"><i class="fa-solid fa-book-open-reader"></i></div>
+            <p>Avg Study Hours</p>
+            <h2 id="study">0</h2>
+        </div>
+    </div>
+
+    <!-- ================= DASHBOARD ================= -->
+    <div class="dashboard-grid">
+
+        <div class="card large-card">
+            <h3>Academic year-wise satisfaction score</h3>
+            <canvas id="yearChart"></canvas>
+        </div>
+
+        <div class="card large-card">
+            <h3>satisfaction score provided to facility</h3>
+            <canvas id="facilityChart"></canvas>
+        </div>
+
+        <div class="card medium-card">
+            <h3>Gender wise Satisfaction score</h3>
+            <canvas id="genderChart"></canvas>
+        </div>
+
+        <div class="card medium-card">
+            <h3>Major wise Satisfaction score</h3>
+            <canvas id="majorChart"></canvas>
+        </div>
+
+        <div class="card medium-card">
+            <h3>Placement Confidence </h3>
+            <canvas id="placementChart"></canvas>
+        </div>
+
+        <div class="card small-card">
+            <h3>Hostel Distribution</h3>
+            <canvas id="hostelChart"></canvas>
+        </div>
+
+        <div class="card small-card">
+            <h3>Facility Distribution</h3>
+            <canvas id="facilityDonut"></canvas>
+        </div>
+
+        <div class="card full-width">
+            <h3>Student Performance Correlation Heatmap</h3>
+            <div id="heatmap-container"></div>
+        </div>
+
+    </div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+const charts = {};
+
+// ================= FILTER QUERY =================
+function getFilters() {
+    const params = new URLSearchParams();
+
+    const facility = document.getElementById("facilityFilter").value;
+    const gender = document.getElementById("genderFilter").value;
+    const year = document.getElementById("yearFilter").value;
+    const hostel = document.getElementById("hostelFilter").value;
+
+    if (facility) params.append("facility", facility);
+    if (gender) params.append("gender", gender);
+    if (year) params.append("academic_year", year);
+    if (hostel) params.append("hostel", hostel);
+
+    return params.toString();
+}
+
+// ================= POPULATE FILTERS =================
+function populateDropdown(id, values) {
+    const dropdown = document.getElementById(id);
+
+    values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        dropdown.appendChild(option);
+    });
+}
+
+// ================= LOAD FILTERS =================
+async function loadFilters() {
+    try {
+        const response = await fetch(`${API}/filters`);
+        const data = await response.json();
+
+        populateDropdown("facilityFilter", data.facilities);
+        populateDropdown("genderFilter", data.genders);
+        populateDropdown("yearFilter", data.years);
+        populateDropdown("hostelFilter", data.hostel);
+
+        loadDashboard();
+
+    } catch (error) {
+        console.error("Filter loading error:", error);
+    }
+}
+
+// ================= FILTER EVENTS =================
+document.querySelectorAll("select").forEach(select => {
+    select.addEventListener("change", loadDashboard);
+});
+
+// ================= KPI =================
+async function loadKPI() {
+    try {
+        const response = await fetch(`${API}/kpi?${getFilters()}`);
+        const data = await response.json();
+
+        document.getElementById("students").innerText = data.total_students ?? 0;
+        document.getElementById("satisfaction").innerText = data.avg_satisfaction ?? 0;
+        document.getElementById("attendance").innerText = data.avg_attendance ?? 0;
+        document.getElementById("study").innerText = data.avg_study_hours ?? 0;
+
+    } catch (error) {
+        console.error("KPI error:", error);
+    }
+}
+
+// ================= CHART =================
+async function createChart(endpoint, canvasId, chartType, color, horizontal=false, xLabel="Categories", yLabel="Values") {
+    try {
+        const response = await fetch(`${API}${endpoint}?${getFilters()}`);
+        const data = await response.json();
+
+        if (!data.labels || !data.values) return;
+
+        if (charts[canvasId]) charts[canvasId].destroy();
+
+        // Multi-color palette for pie & doughnut
+        let bgColors = color;
+        if (chartType === "pie" || chartType === "doughnut") {
+            bgColors = [
+                "#8b5cf6",
+                "#06b6d4",
+                "#f59e0b",
+                "#10b981",
+                "#ef4444",
+                "#ec4899",
+                "#6366f1",
+                "#84cc16",
+                "#14b8a6",
+                "#f97316"
+            ];
+        }
+
+        charts[canvasId] = new Chart(document.getElementById(canvasId), {
+            type: chartType,
+
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: yLabel,
+                    data: data.values,
+                    backgroundColor: chartType === "line" ? "transparent" : bgColors,
+                    borderColor: chartType === "line" ? color : "#0b1120",
+                    borderWidth: chartType === "line" ? 4 : 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: chartType === "line" ? 5 : 0,
+                    pointBackgroundColor: color
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: horizontal ? "y" : "x",
+
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: (chartType === "pie" || chartType === "doughnut") ? "right" : "top",
+                        labels: {
+                            color: "white",
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (chartType === "pie" || chartType === "doughnut") {
+                                    const total = context.dataset.data.reduce((a,b) => a+b, 0);
+                                    const value = context.raw;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+
+                scales: (chartType === "pie" || chartType === "doughnut") ? {} : {
+                    x: {
+                        title: {
+                            display: true,
+                            text: horizontal ? yLabel : xLabel,
+                            color: "white"
+                        },
+                        ticks: { color: "white" }
+                    },
+
+                    y: {
+                        title: {
+                            display: true,
+                            text: horizontal ? xLabel : yLabel,
+                            color: "white"
+                        },
+                        ticks: { color: "white" },
+                        beginAtZero: true
+                    }
+                }
+            },
+
+            plugins: [{
+                id: "customDataLabels",
+                afterDraw(chart) {
+                    if (chartType !== "pie" && chartType !== "doughnut") return;
+
+                    const { ctx } = chart;
+                    ctx.save();
+
+                    const dataset = chart.data.datasets[0];
+                    const total = dataset.data.reduce((a,b) => a+b, 0);
+
+                    chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                        const value = dataset.data[index];
+                        const percentage = ((value / total) * 100).toFixed(1) + "%";
+
+                        const position = datapoint.tooltipPosition();
+
+                        ctx.fillStyle = "white";
+                        ctx.font = "bold 12px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+
+                        ctx.fillText(percentage, position.x, position.y);
+                    });
+
+                    ctx.restore();
+                }
+            }]
+        });
+
+    } catch (error) {
+        console.error(`Chart error (${canvasId}):`, error);
+    }
+}
+
+        
+        
+        
+
+// ================= HEATMAP =================
+async function loadHeatmap() {
+    try {
+        const response = await fetch(`${API}/correlation_heatmap?${getFilters()}`);
+        const data = await response.json();
+
+        const container = document.getElementById("heatmap-container");
+        container.innerHTML = "";
+
+        const header = document.createElement("div");
+        header.className = "heat-header";
+
+        const empty = document.createElement("div");
+        empty.className = "heat-label";
+        header.appendChild(empty);
+
+        data.labels.forEach(label => {
+            const cell = document.createElement("div");
+            cell.className = "heat-label";
+            cell.innerText = label;
+            header.appendChild(cell);
+        });
+
+        container.appendChild(header);
+
+        data.matrix.forEach((row, i) => {
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "heat-row";
+
+            const rowLabel = document.createElement("div");
+            rowLabel.className = "heat-label";
+            rowLabel.innerText = data.labels[i];
+            rowDiv.appendChild(rowLabel);
+
+            row.forEach(value => {
+                const cell = document.createElement("div");
+                cell.className = "heat-cell";
+                cell.style.backgroundColor = `rgba(139,92,246,${Math.abs(value)})`;
+                cell.innerText = value;
+                rowDiv.appendChild(cell);
+            });
+
+            container.appendChild(rowDiv);
+        });
+
+    } catch (error) {
+        console.error("Heatmap error:", error);
+    }
+}
+
+// ================= DASHBOARD =================
+function loadDashboard() {
+    loadKPI();
+
+    createChart("/yearly_satisfaction","yearChart","line","#8b5cf6",false,"Academic Year","Satisfaction Score");
+    createChart("/facility_satisfaction","facilityChart","bar","#7c3aed",false,"Facility","Average Satisfaction Score");
+    createChart("/gender_satisfaction","genderChart","bar","#a78bfa",true,"Gender","Average Satisfaction Score");
+    createChart("/major_satisfaction","majorChart","bar","#9d4edd",true,"Major","Average Satisfaction Score");
+    createChart("/placement_distribution","placementChart","bar","#6d28d9",false,"Placement Confidence","Number of Students");
+    createChart("/hostel_distribution","hostelChart","pie",["#8b5cf6","#c4b5fd"]);
+    createChart("/facility_distribution","facilityDonut","doughnut",["#c4b5fd","#a78bfa","#7c3aed","#5b21b6"]);
+
+    loadHeatmap();
+}
+
+// ================= START =================
+loadFilters();
+</script>
+
+</body>
+</html>
